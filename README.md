@@ -549,12 +549,15 @@ local runService = game:GetService("RunService")
 local rep = game:GetService("ReplicatedStorage")
 local modules = rep.Modules
 local aiModule = require(modules.AI)
+local simplePath = require(modules.SimplePath)
 
 local config = nil
 
 local currentTicks = 0
 local currentTimerTicks = 0
 local aiClasses = {}
+
+local aiTasks = {}
 
 function InitAIs()
 	table.insert(aiClasses,
@@ -583,10 +586,7 @@ end
 
 function InitAI(ai)
 	ai:SetAttribute("Target","")
-	ai:SetAttribute("LastPosition",vector.zero)
-	ai:SetAttribute("IsMoving",false)
 	ai:SetAttribute("CanAttack",true)
-	
 	
 	local aiClass = nil
 	for _,class in pairs(aiClasses) do
@@ -661,23 +661,17 @@ function UpdateAIs(time,deltaTime)
 						nearestDistance = distance
 					end
 				end
-
+				
+				-- Making AI Move
 				if(ai:GetAttribute("Target") ~= nearestTarget.Name) then
 					ai:SetAttribute("Target",nearestTarget.Name)
-					ai:SetAttribute("LastPosition",nearestPlayer.Position)
-				end
-
-				-- Making AI move
-				local humanoid = ai:FindFirstChildWhichIsA("Humanoid")
-				local pos = nearestPlayer.Position
-
-				if (ai:GetAttribute("LastPosition") ~= pos or ai:GetAttribute("IsMoving") == false) then
-					local humanoidPredictionAddon = nearestPlayer.AssemblyLinearVelocity
-					pos += humanoidPredictionAddon * config.VelocityPredictionAddonMultiplier
-
-					humanoid:MoveTo(pos)
-					ai:SetAttribute("IsMoving",true)
-					ai:SetAttribute("LastPosition",pos)
+					
+					task.spawn(function()
+						local path = simplePath.new(ai)
+						while(ai:GetAttribute("Target") == nearestTarget.Name) do
+							path:Run(nearestPlayer)
+						end
+					end)
 				end
 			end)
 			
