@@ -139,6 +139,7 @@ function material.LoadMaterials(materialFolder:Folder)
 	return materials
 end
 
+-- Get a random material
 function material.GetRandomMaterial(materials)
 	local totalProbability = 0
 	for _, mat in pairs(materials) do
@@ -529,6 +530,184 @@ end
 events.Raid.OnServerEvent:Connect(raid)
 events.TeleportToIsland.OnServerEvent:Connect(teleportToIsland)
 ```
+---
+
+### AI Simulation
+
+**Role:** All roles
+**Tools:** N/A
+
+**Features:**
+- Large amounts of AIs being simulated
+
+**Video:** https://youtu.be/c_7TKQWT57M
+
+**AI Handler Code Snippet:**
+```lua
+local aiFolder = workspace.AIs
+local runService = game:GetService("RunService")
+local rep = game:GetService("ReplicatedStorage")
+local modules = rep.Modules
+local aiModule = require(modules.AI)
+
+local config = nil
+
+local currentTicks = 0
+local currentTimerTicks = 0
+local aiClasses = {}
+
+function InitAIs()
+	table.insert(aiClasses,
+		aiModule.CreateNewAIClass({
+			Name="Assassin",
+			Type="Close-Quarters",
+			Range=2.5,
+			Damage=1,
+			Cooldown=1,
+			Health = 100,
+			WalkSpeed = 20,
+			Attack = function(self,target : Humanoid)
+				target.Health -= self.Damage
+				return true
+			end,
+		})
+	)
+	
+	task.spawn(function()
+		for _, ai in pairs(aiFolder:GetChildren()) do
+			InitAI(ai)
+		end
+	end)
+
+end
+
+function InitAI(ai)
+	ai:SetAttribute("Target","")
+	ai:SetAttribute("LastPosition",vector.zero)
+	ai:SetAttribute("IsMoving",false)
+	ai:SetAttribute("CanAttack",true)
+	
+	
+	local aiClass = nil
+	for _,class in pairs(aiClasses) do
+		if (class.Name == ai:GetAttribute("Class")) then
+			aiClass = class
+		end
+	end
+	
+	ai.Humanoid.WalkSpeed = aiClass.WalkSpeed
+	ai.Humanoid.MaxHealth = aiClass.Health
+	ai.Humanoid.Health = aiClass.Health
+end
+
+function UpdateAIs(time,deltaTime)
+	currentTimerTicks += 1
+	
+	if(currentTimerTicks > config.AIPhysicsTickCheckTimer) then
+		currentTimerTicks = 0
+		currentTicks += 1
+		if(currentTicks > config.AIPhysicsTicks + (config.TotalAIsTickInfluence * config.AIPhysicsTicks)) then
+			currentTicks = 0
+		end
+
+		-- Check when we are performing the AI physics tasks
+
+		local numberOfAIs = #aiFolder:GetChildren()
+		local aisToCalculate = {}
+
+		for index, ai in pairs(aiFolder:GetChildren()) do
+			if(bit32.band(index,  config.AIPhysicsTicks - 1) == currentTicks) then
+				table.insert(aisToCalculate,ai)
+			end
+		end
+
+		-- Looping through each AI
+		for _, ai in pairs(aisToCalculate) do
+			local success,error = pcall(function()
+				-- Checking for different targets.
+				local nearestPlayer = nil
+				local nearestDistance = -1
+				local nearestTarget = nil
+				local aiClass = nil
+
+				for _,class in pairs(aiClasses) do
+					if (class.Name == ai:GetAttribute("Class")) then
+						aiClass = class
+					end
+				end
+
+				for _, player in pairs(game.Players:GetPlayers()) do
+					local distance = -1
+					local rootPart = nil
+
+					local success,error = pcall(function()
+						rootPart = player.Character.PrimaryPart
+						distance = (ai.PrimaryPart.Position - rootPart.Position).magnitude
+					end)
+
+					if (ai:GetAttribute("CanAttack") == true and (distance - (deltaTime * aiClass.WalkSpeed * 3)) < aiClass.Range) then
+						if(aiClass:Attack(rootPart.Parent.Humanoid)) then
+							task.spawn(function()
+								ai:SetAttribute("CanAttack",false)
+								task.wait(aiClass.Cooldown)
+								ai:SetAttribute("CanAttack",true)
+							end)
+						end
+					end
+
+					if ((distance < nearestDistance or nearestDistance == -1) and success) then
+						nearestPlayer = rootPart
+						nearestTarget = player.Name
+						nearestDistance = distance
+					end
+				end
+
+				if(ai:GetAttribute("Target") ~= nearestTarget.Name) then
+					ai:SetAttribute("Target",nearestTarget.Name)
+					ai:SetAttribute("LastPosition",nearestPlayer.Position)
+				end
+
+				-- Making AI move
+				local humanoid = ai:FindFirstChildWhichIsA("Humanoid")
+				local pos = nearestPlayer.Position
+
+				if (ai:GetAttribute("LastPosition") ~= pos or ai:GetAttribute("IsMoving") == false) then
+					local humanoidPredictionAddon = nearestPlayer.AssemblyLinearVelocity
+					pos += humanoidPredictionAddon * config.VelocityPredictionAddonMultiplier
+
+					humanoid:MoveTo(pos)
+					ai:SetAttribute("IsMoving",true)
+					ai:SetAttribute("LastPosition",pos)
+				end
+			end)
+			
+			if(error) then
+				print("No player targets for AIs")
+			end
+		end
+	end
+end
+
+function UpdateConfig()
+	config = script.Configuration:GetAttributes()
+	local relevantPowerOfTwo = 2
+	
+	while (relevantPowerOfTwo < config.AIPhysicsTicks) do
+		relevantPowerOfTwo *= 2
+	end
+	
+	config.AIPhysicsTicks = relevantPowerOfTwo
+	print(relevantPowerOfTwo)
+end
+
+UpdateConfig()
+InitAIs()
+
+runService.Stepped:Connect(UpdateAIs)
+aiFolder.ChildAdded:Connect(InitAI)
+script.Configuration.Changed:Connect(UpdateConfig)
+```
+
 
 ---
 
