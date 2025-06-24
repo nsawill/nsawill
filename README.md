@@ -361,6 +361,127 @@ events.Remote.FinishTutorial.OnServerEvent:Connect(CompleteTutorial)
 events.Remote.ClientRetrievePlayerData.OnServerInvoke = RetrievePlayerData
 ```
 
+**Local Data Handler Code Snippet:**
+```lua
+local rep = game.ReplicatedStorage
+local events = rep:WaitForChild("Events")
+
+-- If any data is changed whenever the servers player data is changed, call the bindable event and send the data to any scripts that require updated data
+function DataChange(_data)
+	for name, statistic in pairs(_data) do
+		if(_data[name] ~= _data[name]) then
+			script:FindFirstChild(name):Fire(statistic)
+		end
+	end
+	_G.Data = _data
+end
+
+-- When new data is retrieved, update the players data
+function RetrieveDataCallback(_data)
+	_G.Data = _data
+	_G.FinishedLoadingData = true
+end
+
+-- Ask to get the data from server
+function RetrieveData()
+	_G.FinishedLoadingData = false
+	events:WaitForChild("Remote"):WaitForChild("ClientRetrievePlayerData"):InvokeServer()
+end
+
+-- Get player data and make new bindable events
+function init()
+	RetrieveData()
+	for name, statistic in pairs(_G.Data) do
+		local event = Instance.new("BindableEvent")
+		event.Name = name
+		event.Parent = script
+	end
+end
+
+-- Hook callback functions
+events:WaitForChild("Remote"):WaitForChild("ServerPlayerDataChange").OnClientEvent:Connect(DataChange)
+events:WaitForChild("Remote"):WaitForChild("ClientRetrievePlayerData").OnClientInvoke = RetrieveDataCallback
+
+-- Game start
+init()
+```
+
+**Local Parts/Material Handler Code Snippet:**
+```lua
+local rep = game:GetService("ReplicatedStorage")
+local events = rep:WaitForChild("Events")
+local remotes = events:WaitForChild("Remote")
+local negativeBalanceBindable = events:WaitForChild("Bindable"):WaitForChild("Local"):WaitForChild("NegativeBalance")
+local shop = workspace:WaitForChild("Shop")
+local pSpawns = shop:WaitForChild("PotentialSpawnPoints")
+local localParts = workspace:WaitForChild("LocalParts")
+local pp = script:WaitForChild("ProximityPrompt")
+_G.PartStorage = {}
+_G.NegativeBalance = 0
+
+function GetRandomRotation()
+	return vector.create(math.random(1,360),math.random(1,360),math.random(1,360))
+end
+
+function HandleMaterialParts(parts,materials)
+	for index, part in pairs(localParts:GetChildren()) do
+		part:Destroy()
+	end
+	
+	local spawnList = pSpawns:GetChildren()
+	for index, part in pairs(materials[2]) do
+		local newPart = part:Clone()
+		newPart.Parent = localParts
+		
+		local randomSpawn = math.random(1,#spawnList)
+		newPart.Position = spawnList[randomSpawn].Position
+		newPart.Rotation = GetRandomRotation()
+		table.remove(spawnList,randomSpawn)
+		
+		local proximityPrompt = pp:Clone()
+		proximityPrompt.Parent = newPart
+		proximityPrompt.ObjectText = "Cost - $"..part:GetAttribute("Price")
+		
+		proximityPrompt.Triggered:Connect(function(plr)
+			PickUpParts(newPart,materials[1][index])
+		end)
+	end
+end
+
+function PickUpParts(part,material)
+	if _G.Data.MaxHandStorage > #_G.PartStorage then
+		if not table.find(_G.PartStorage,part) then
+			if (_G.Data.Money-_G.NegativeBalance) >= part:GetAttribute("Price") then
+				local char = game.Players.LocalPlayer.Character
+				local hum = char:WaitForChild("Humanoid")
+				
+				table.insert(_G.PartStorage,part)
+				part:Destroy()
+				_G.NegativeBalance += part:GetAttribute("Price")
+				negativeBalanceBindable:Fire(_G.NegativeBalance)
+				hum.WalkSpeed = 20 - #_G.PartStorage
+				print(_G.PartStorage)
+			else
+				print("Not enough money")
+			end
+		else
+			print("Already have part in storage")
+		end
+	else
+		print("Ran out of storage")
+	end
+end
+
+
+function RecieveMaterials(materials)
+	print(materials)
+	HandleMaterialParts(workspace:WaitForChild("LocalParts"):GetChildren(),materials)
+	return true
+end
+
+remotes:WaitForChild("SendClientMaterialList").OnClientInvoke = RecieveMaterials
+```
+
 ---
 
 ### Raiders
@@ -411,4 +532,18 @@ events.TeleportToIsland.OnServerEvent:Connect(teleportToIsland)
 
 ---
 
-## More to come soon as I get more projects to work on. Small commissions are not shown here, only relatively large projects
+## Small Commissions
+
+Small commission code is not shown, only relatively large projects.
+
+My small commissions include and are not limited to:
+- Bladeball-esque system
+- Pick up and Drop system
+- Train that follows bezier curve/track
+- Leaderboards
+- Daily rewards
+- Spinning wheel for rewards
+- Inventory system
+- Player stats system
+
+# More to come soon as I get more projects to work on.
