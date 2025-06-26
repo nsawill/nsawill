@@ -20,6 +20,8 @@ You can find me on discord by the username **"nsawill"** and same for roblox.
 - Modular part system for making towers out of specific parts that have specific properties, very efficient and easy to use
 - Player data such as money, available parts, level, exp, exp multiplier etc
 
+**Video:** https://youtu.be/5KjhzwqpRrA
+
 **Disaster Handler Code Snippet:**
 ```lua
 local rep = game.ReplicatedStorage
@@ -544,7 +546,181 @@ events.TeleportToIsland.OnServerEvent:Connect(teleportToIsland)
 
 **AI Handler Code Snippet:**
 ```lua
+local aiFolder = workspace.AIs
+local runService = game:GetService("RunService")
+local rep = game:GetService("ReplicatedStorage")
+local modules = rep.Modules
+local aiModule = require(modules.AI)
+local simplePath = require(modules.SimplePath)
 
+local config = nil
+
+local currentTicks = 0
+local currentTimerTicks = 0
+local aiClasses = {}
+
+local aiTasks = {}
+
+print(#aiFolder:GetChildren())
+
+
+function InitAIs()
+	table.insert(aiClasses,
+		aiModule.CreateNewAIClass({
+			Name="Assassin",
+			Type="Close-Quarters",
+			Range=2.5,
+			Damage=1,
+			Cooldown=1,
+			Health = 100,
+			WalkSpeed = 20,
+			Attack = function(self,target : Humanoid)
+				target.Health -= self.Damage
+				return true
+			end,
+		})
+	)
+	
+	task.spawn(function()
+		for _, ai in pairs(aiFolder:GetChildren()) do
+			InitAI(ai)
+		end
+	end)
+
+end
+
+function InitAI(ai)
+	ai:SetAttribute("Target","")
+	ai:SetAttribute("CanAttack",true)
+	ai:SetAttribute("IsMoving",false)
+	
+	local aiClass = nil
+	for _,class in pairs(aiClasses) do
+		if (class.Name == ai:GetAttribute("Class")) then
+			aiClass = class
+		end
+	end
+	
+	ai.Humanoid.WalkSpeed = aiClass.WalkSpeed
+	ai.Humanoid.MaxHealth = aiClass.Health
+	ai.Humanoid.Health = aiClass.Health
+end
+
+function UpdateAIs(time,deltaTime)
+	currentTimerTicks += 1
+	
+	if(currentTimerTicks > config.AIPhysicsTickCheckTimer) then
+		currentTimerTicks = 0
+		currentTicks += 1
+		if(currentTicks > config.AIPhysicsTicks + (config.TotalAIsTickInfluence * config.AIPhysicsTicks)) then
+			currentTicks = 0
+		end
+
+		-- Check when we are performing the AI physics tasks
+
+		local numberOfAIs = #aiFolder:GetChildren()
+		local aisToCalculate = {}
+
+		for index, ai in pairs(aiFolder:GetChildren()) do
+			if(bit32.band(index,  config.AIPhysicsTicks - 1) == currentTicks) then
+				table.insert(aisToCalculate,ai)
+			end
+		end
+
+		-- Looping through each AI
+		for _, ai in pairs(aisToCalculate) do
+			local success,error = pcall(function()
+				-- Checking for different targets.
+				local nearestPlayer = nil
+				local nearestDistance = -1
+				local nearestTarget = nil
+				local aiClass = nil
+
+				for _,class in pairs(aiClasses) do
+					if (class.Name == ai:GetAttribute("Class")) then
+						aiClass = class
+					end
+				end
+
+				for _, player in pairs(game.Players:GetPlayers()) do
+					local distance = -1
+					local rootPart = nil
+
+					local success,error = pcall(function()
+						rootPart = player.Character.PrimaryPart
+						distance = (ai.PrimaryPart.Position - rootPart.Position).magnitude
+					end)
+
+					if (ai:GetAttribute("CanAttack") == true and (distance - (deltaTime * aiClass.WalkSpeed * 3)) < aiClass.Range) then
+						if(aiClass:Attack(rootPart.Parent.Humanoid)) then
+							task.spawn(function()
+								ai:SetAttribute("CanAttack",false)
+								task.wait(aiClass.Cooldown)
+								ai:SetAttribute("CanAttack",true)
+							end)
+						end
+					end
+
+					if ((distance < nearestDistance or nearestDistance == -1) and success) then
+						nearestPlayer = rootPart
+						nearestTarget = player.Name
+						nearestDistance = distance
+					end
+				end
+				
+				if(ai:GetAttribute("Target") ~= nearestTarget) then
+					ai:SetAttribute("Target",nearestTarget)
+				end
+				
+				
+				if(ai:GetAttribute("IsMoving") == false) then
+					ai:SetAttribute("IsMoving",true)
+					local path = simplePath.new(ai)
+					path.Reached:Connect(function()
+						path:Run(workspace:FindFirstChild(ai:GetAttribute("Target")).PrimaryPart)
+					end)
+
+					path.Blocked:Connect(function()
+						path:Run(workspace:FindFirstChild(ai:GetAttribute("Target")).PrimaryPart)
+					end)
+
+					path.WaypointReached:Connect(function()
+						path:Run(workspace:FindFirstChild(ai:GetAttribute("Target")).PrimaryPart)
+					end)
+
+					path.Error:Connect(function(errorType)
+						path:Run(workspace:FindFirstChild(ai:GetAttribute("Target")).PrimaryPart)
+					end)
+
+					path:Run(nearestPlayer)
+				end
+			end)
+			
+			if(error) then
+				print("No player targets for AIs")
+			end
+		end
+	end
+end
+
+function UpdateConfig()
+	config = script.Configuration:GetAttributes()
+	local relevantPowerOfTwo = 2
+	
+	while (relevantPowerOfTwo < config.AIPhysicsTicks) do
+		relevantPowerOfTwo *= 2
+	end
+	
+	config.AIPhysicsTicks = relevantPowerOfTwo
+	print(relevantPowerOfTwo)
+end
+
+UpdateConfig()
+InitAIs()
+
+runService.Stepped:Connect(UpdateAIs)
+aiFolder.ChildAdded:Connect(InitAI)
+script.Configuration.Changed:Connect(UpdateConfig)
 ```
 
 
