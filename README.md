@@ -1,5 +1,4 @@
 # Hi, I am nsawill.
----
 I script in Roblox Studio. I have over 4 years of experience scripting in roblox studio. I started building games in 2019. I am 15 years old.
 
 I focus on clear, functional game scripts. My work improves gameplay and user experience.
@@ -22,7 +21,7 @@ Skills:
 * Clean, consistent and modular code
 * UI scripting
 * Performance tracking + code optimization
-* Back-end
+* Full-stack developer
 ---
 Tools:
 
@@ -30,4 +29,10 @@ Tools:
 * Git and GitHub
 * Rojo and Knit
 
-Contact me to discuss Roblox development or collaboration via discord with the username **nsawill**.
+---
+What I can't do:
+
+* Car systems
+
+---
+## Contact me to discuss Roblox development or collaboration via discord with the username **nsawill**.
