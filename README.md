@@ -1,33 +1,33 @@
-Hi, I am nsawill.
-
-I script in Roblox Studio. I have over 4 years of experience. I started in 2019. I am 15 years old.
+# Hi, I am nsawill.
+---
+I script in Roblox Studio. I have over 4 years of experience scripting in roblox studio. I started building games in 2019. I am 15 years old.
 
 I focus on clear, functional game scripts. My work improves gameplay and user experience.
-
+---
 Here are some of my project videos:
 
-* Roblox obby mechanics and scripting
+* Custom horror character system with unique skills, skins, adaptive music and more
   [https://youtu.be/vnYzMcnzk5s](https://youtu.be/vnYzMcnzk5s)
-* Custom UI and inventory system demo
+* Custom camera functionality to allow camera to see through objects that block view of character + voxel based procedural generation
   [https://youtu.be/6xEH-R1TyLM](https://youtu.be/6xEH-R1TyLM)
-* Advanced game scripting example
+* Advanced movement system that involves wall jumping, sliding with controls, sprinting, hanging onto ledges, climbing up ledges, stamina drain and custom falling
   [https://youtu.be/pS6ndm49avQ](https://youtu.be/pS6ndm49avQ)
-* Multiplayer game features explained
+* Procedural cave generation using Roblox's terrain system with custom materials depending on where the cave is at + custom structure spawning
   [https://youtu.be/EQtmypEndFs](https://youtu.be/EQtmypEndFs)
-* Unique game mode script demo
+* Advanced AI Pathfinding system with very performant code that allows me to simulate hundreds of AIs at once.
   [https://youtu.be/c\_7TKQWT57M](https://youtu.be/c_7TKQWT57M)
-
+---
 Skills:
 
-* Lua scripting for Roblox Studio
+* Clean, consistent and modular code
 * UI scripting
-* Multiplayer logic
-* Data persistence
-
+* Performance tracking + code optimization
+* Back-end
+---
 Tools:
 
 * Roblox Studio
 * Git and GitHub
 * Rojo and Knit
 
-Contact me to discuss Roblox development or collaboration via discord with the username nsawill.
+Contact me to discuss Roblox development or collaboration via discord with the username **nsawill**.
